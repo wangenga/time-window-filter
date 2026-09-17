@@ -1,0 +1,67 @@
+=== Log Analysis Report ===
+Generated: 2024-03-15 09:00:00
+
+--- Activity Summary ---
+INFO: 56
+WARN: 16
+ERROR: 6
+ALERT: 5
+
+--- Flagged Entries ---
+2024-03-15 02:16:02 | ALERT | 203.0.113.42 | /etc/passwd | read
+2024-03-15 02:18:20 | ALERT | 203.0.113.42 | /etc/shadow | read
+2024-03-15 02:21:40 | ALERT | 203.0.113.42 | /var/backups | downloaded
+2024-03-15 19:31:00 | ALERT | 203.0.113.42 | /etc/passwd | read
+2024-03-15 19:35:00 | ALERT | 203.0.113.42 | /root/.ssh | accessed
+2024-03-15 04:10:15 | ERROR | 198.51.100.7 | /api/token | denied
+2024-03-15 07:05:42 | ERROR | 10.0.0.5 | /reports/export | timeout
+2024-03-15 08:40:00 | ERROR | 10.0.0.8 | /api/data | timeout
+2024-03-15 09:30:00 | ERROR | 45.33.32.19 | /api/upload | rejected
+2024-03-15 11:35:00 | ERROR | 172.16.0.3 | /api/data | timeout
+2024-03-15 14:45:00 | ERROR | 192.168.1.10 | /api/data | timeout
+2024-03-15 02:14:33 | WARN | 203.0.113.42 | /login | failed
+2024-03-15 02:14:35 | WARN | 203.0.113.42 | /login | failed
+2024-03-15 02:14:38 | WARN | 203.0.113.42 | /login | failed
+2024-03-15 02:19:05 | WARN | 203.0.113.42 | /admin/config | modified
+2024-03-15 04:10:00 | WARN | 198.51.100.7 | /login | failed
+2024-03-15 04:10:04 | WARN | 198.51.100.7 | /login | failed
+2024-03-15 04:10:07 | WARN | 198.51.100.7 | /login | failed
+2024-03-15 04:10:11 | WARN | 198.51.100.7 | /login | failed
+2024-03-15 08:05:11 | WARN | 192.168.1.45 | /login | failed
+2024-03-15 09:12:00 | WARN | 45.33.32.19 | /login | failed
+2024-03-15 09:12:05 | WARN | 45.33.32.19 | /login | failed
+2024-03-15 10:30:00 | WARN | 192.168.1.10 | /api/data | slow
+2024-03-15 13:40:00 | WARN | 45.33.32.19 | /api/upload | rejected
+2024-03-15 15:45:00 | WARN | 198.51.100.7 | /login | failed
+2024-03-15 19:30:00 | WARN | 203.0.113.42 | /login | failed
+2024-03-15 21:00:00 | WARN | 45.33.32.19 | /api/upload | rejected
+
+--- Suspicious Activity by IP ---
+203.0.113.42: 15 entries
+192.168.1.10: 12 entries
+192.168.1.45: 12 entries
+10.0.0.5: 9 entries
+10.0.0.8: 9 entries
+172.16.0.3: 8 entries
+198.51.100.7: 7 entries
+45.33.32.19: 7 entries
+
+--- Unknown Patterns ---
+Line 16: 2024-03-15 03:42:11 | CRIT | 203.0.113.42 | /admin | escalated
+Line 17: 2024-03-15 03:55:30 | DEBUG | 192.168.1.20 | /health | ok
+Line 37: 2024-03-15 07:45:00 | TRACE | 10.0.0.5 | /debug | trace
+Line 45: 2024-03-15 08:20:00 | info | 192.168.1.20 | /dashboard | accessed
+Line 61: 2024-03-15 11:00:00 | FATAL | 10.0.0.5 | /db | connection_lost
+Line 76: 2024-03-15 14:15:00 | DEBUG | 192.168.1.20 | /health | ok
+Line 95: 2024-03-15 22:00:00 | TRACE | 10.0.0.8 | /debug | trace
+Line 97: 2024-03-15 23:00:00 | warn | 198.51.100.7 | /login | failed
+
+--- Malformed Lines ---
+Line 12:
+Line 25: 2024-03-15 05:00:00 | WARN | 203.0.113.42 | /login
+Line 26: 2024-03-15 05:05:00 / INFO / 192.168.1.45 / /home / accessed
+Line 27: not-a-timestamp | INFO | 192.168.1.45 | /home | accessed
+Line 66:
+Line 69: 2024-03-15 12:30:00 | WARN | 172.16.0.3 | /login
+Line 74: 2024-03-15 13:50:00 / WARN / 45.33.32.19 / /login / failed
+Line 93: bad-timestamp-here | ERROR | 45.33.32.19 | /api/upload | rejected
