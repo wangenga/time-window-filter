@@ -1,86 +1,50 @@
 package org.example.Classes;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.Arrays;
-import java.util.List;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 
 public class CommandValidator {
-    //Main class calls this class file.
-    //Its workflow is that it takes the command, cleans it, and ensures that 3 files are part of the argument.
-    // If there are problems, relevant exceptions are called.
-    // If no problem, it has a method to return the 3 file names to the main class.
 
-    String [] paths = new String[3];
-    public void getArguments (String[] arguments){
-        paths = arguments;
+
+    public record Config(String logPath, String rulesPath, String reportPath, TimeWindow window) {}
+
+    private static final String USAGE =
+        "Usage: java -jar tracefinder.jar <logs> <rules.csv> <report>"
+        + " [\"yyyy-MM-dd HH:mm:ss\" \"yyyy-MM-dd HH:mm:ss\"]";
+
+    public static Config parse(String[] args){
+        //Count no. of arguments.
+        if (args.length != 3 && args.length != 5){
+            throw new IllegalArgumentException(
+                "Expected 3 or 5 arguments but got " + args.length + ".\n" + USAGE);
+        }
+
+
+        TimeWindow window = null;
+
+        if (args.length == 5){
+            LocalDateTime start = parseTimeStamp(args[3], "start");
+            LocalDateTime end = parseTimeStamp(args[4], "end");
+            window = new TimeWindow(start, end);
+        }
+
+        return new Config(args[0], args[1], args[2], window);
     }
 
-    //Ensure the correct order of the 3 files: .txt, .csv and .txt
-    public boolean correctOrder (){
-        if (paths[0].endsWith(".txt") && paths[1].endsWith(".csv") && paths[2].endsWith(".txt")){
-            System.out.println("Correct order");
-            return true;
-        }
-        else {
-            System.out.println("Ensure the correct order, txt, csv, txt");
-            return false;
-        }
-    }
-
-    String ruleBook;
-    public void getRulebookPath (String path){
-        System.out.println("The rulebook path is " + path);
-        ruleBook = path;
-    }
-
-
-    //Check if rulebook exists and has expected columns
-    public boolean validRulebook (){
-        if (Files.exists(Paths.get(ruleBook))){
-            //Expected columns:
-            List<String> expectedHeaders = Arrays.asList("level", "severity_score");
-
-            try (BufferedReader br = new BufferedReader(new FileReader(ruleBook))){
-                String header = br.readLine();
-
-                if(header != null){
-                    List<String> actualHeaders = Arrays.stream(header.split(","))
-                            .map(String::trim)
-                            .toList();
-
-                    if (expectedHeaders.equals(actualHeaders)){
-                        System.out.println("Nice! The rulebook has correct headers: " + actualHeaders);
-                        return true;
-                    }
-                    else {
-                        System.out.println("The column names/headers of this file do not match what is expected!!");
-                        return false;
-                    }
-                }
-                else {
-                    System.out.println("This csv file is empty!!");
-                    return false;
-                }
-            } catch (IOException e){
-                e.printStackTrace();
-                return false;
-            }
-        }
-        else{
-            System.out.println("This rulebook does not exist.");
-            return false;
+    private static LocalDateTime parseTimeStamp(String text, String which) {
+        try {
+            return  LocalDateTime.parse(text.trim(), LogsReader.FORMAT);
+        } catch (DateTimeParseException e){
+            throw new IllegalArgumentException(
+                "Invalid " + which + " time \"" + text + "\". Expected format: yyyy-MM-dd HH:mm:ss");
         }
     }
 
-    public String setRulebookPath (){
-        return ruleBook;
-    }
 
     String report;
     public void getReportPath (String path){
