@@ -1,10 +1,6 @@
 package org.example.Classes;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 
@@ -45,42 +41,4 @@ public class CommandValidator {
         }
     }
 
-
-    String report;
-    public void getReportPath (String path){
-        System.out.println("The report path is " + path);
-        report = path;
-    }
-
-    /**
-     * Checks that `report` is a valid .txt path, creates it if missing,
-     * or overwrites it with `newData` if it already exists.
-     */
-    public void writeReport(String newData) throws IOException {
-        if (report == null || report.isBlank()) {
-            throw new IllegalArgumentException("Report path has not been set.");
-        }
-
-        // 1. Validate format: must end with .txt (case-insensitive)
-        if (!report.toLowerCase().endsWith(".txt")) {
-            throw new IllegalArgumentException(
-                    "Invalid report format. Path must end with .txt: " + report);
-        }
-
-        Path path = Paths.get(report);
-
-        // If file exists -> overwrite. If not -> create.
-        if (Files.exists(path)) {
-            // Overwrite by truncating and writing
-            Files.writeString(path, newData,
-                    StandardOpenOption.TRUNCATE_EXISTING,
-                    StandardOpenOption.WRITE);
-            System.out.println("Report updated: " + path.toAbsolutePath());
-        } else {
-            Files.writeString(path, newData,
-                    StandardOpenOption.CREATE_NEW,
-                    StandardOpenOption.WRITE);
-            System.out.println("Report created: " + path.toAbsolutePath());
-        }
-    }
 }
