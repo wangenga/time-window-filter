@@ -1,178 +1,106 @@
 package org.example.Classes;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CommandValidatorTest {
+import java.time.LocalDateTime;
+import org.junit.jupiter.api.Test;
 
-    @TempDir
-    Path tempDir;
+class CommandValidatorTest {
+
+    private static final String S = "2024-03-15 02:00:00";
+    private static final String E = "2024-03-15 03:30:00";
+
+    private CommandValidator.Config parse(String... args) {
+        return CommandValidator.parse(args);
+    }
+
+    private String messageFor(String... args) {
+        return assertThrows(IllegalArgumentException.class, () -> CommandValidator.parse(args)).getMessage();
+    }
+
+    // ---------- argument count ----------
 
     @Test
-    void correctOrder_returnsTrueForTxtCsvTxt() {
-        CommandValidator validator = new CommandValidator();
-        validator.getArguments(new String[]{"input.txt", "data.csv", "output.txt"});
-
-        assertTrue(validator.correctOrder());
+    void threeArgs_noWindow_pathsInOrder() {
+        CommandValidator.Config c = parse("logs.txt", "rules.csv", "report.txt");
+        assertEquals("logs.txt", c.logPath());
+        assertEquals("rules.csv", c.rulesPath());
+        assertEquals("report.txt", c.reportPath());
+        assertNull(c.window());
     }
 
     @Test
-    void correctOrder_returnsFalseWhenFirstIsNotTxt() {
-        CommandValidator validator = new CommandValidator();
-        validator.getArguments(new String[]{"input.csv", "data.csv", "output.txt"});
-
-        assertFalse(validator.correctOrder());
+    void fiveArgs_buildsWindowFromArgs4And5() {
+        CommandValidator.Config c = parse("l", "r", "o", S, E);
+        assertEquals(LocalDateTime.of(2024, 3, 15, 2, 0, 0), c.window().start());
+        assertEquals(LocalDateTime.of(2024, 3, 15, 3, 30, 0), c.window().end());
     }
 
     @Test
-    void correctOrder_returnsFalseWhenSecondIsNotCsv() {
-        CommandValidator validator = new CommandValidator();
-        validator.getArguments(new String[]{"input.txt", "data.txt", "output.txt"});
+    void wrongArgCounts_throwWithCountAndUsage() {
+        for (int n : new int[]{0, 1, 2, 4, 6}) {
+            String m = messageFor(new String[n]);
+            assertTrue(m.contains(String.valueOf(n)), "count " + n);
+            assertTrue(m.contains("Usage"), "usage " + n);
+        }
+    }
 
-        assertFalse(validator.correctOrder());
+    // ---------- names don't matter ----------
+
+    @Test
+    void anyFileNamesAreAccepted() {
+        CommandValidator.Config c = parse("access.log", "rules.dat", "out.report");
+        assertEquals("out.report", c.reportPath());
+    }
+
+    // ---------- bad timestamps ----------
+
+    @Test
+    void unparseableStart_messageSaysStart() {
+        assertTrue(messageFor("l", "r", "o", "nonsense", E).contains("start"));
     }
 
     @Test
-    void correctOrder_returnsFalseWhenThirdIsNotTxt() {
-        CommandValidator validator = new CommandValidator();
-        validator.getArguments(new String[]{"input.txt", "data.csv", "output.csv"});
-
-        assertFalse(validator.correctOrder());
+    void unparseableEnd_messageSaysEnd() {
+        assertTrue(messageFor("l", "r", "o", S, "nonsense").contains("end"));
     }
 
     @Test
-    void validRulebook_returnsTrueForCorrectHeaders() throws IOException {
-        Path rulebook = tempDir.resolve("rules.csv");
-        Files.writeString(rulebook, "level,severity_score\n1,10\n2,20\n");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
-
-        assertTrue(validator.validRulebook());
+    void impossibleDate_isRejected() {
+        assertThrows(IllegalArgumentException.class, () -> parse("l", "r", "o", "2024-02-30 02:00:00", E));
     }
 
     @Test
-    void validRulebook_returnsTrueWhenHeadersHaveSpaces() throws IOException {
-        Path rulebook = tempDir.resolve("rules_spaces.csv");
-        Files.writeString(rulebook, " level , severity_score \n1,10\n");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
-
-        assertTrue(validator.validRulebook());
+    void wrongFormats_areRejected() {
+        assertThrows(IllegalArgumentException.class, () -> parse("l", "r", "o", "2024/03/15 02:00:00", E));
+        assertThrows(IllegalArgumentException.class, () -> parse("l", "r", "o", "2024-03-15", E));
+        assertThrows(IllegalArgumentException.class, () -> parse("l", "r", "o", S, ""));
     }
 
     @Test
-    void validRulebook_returnsFalseForWrongHeaders() throws IOException {
-        Path rulebook = tempDir.resolve("wrong_headers.csv");
-        Files.writeString(rulebook, "level,score\n1,10\n");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
-
-        assertFalse(validator.validRulebook());
+    void timestampWithSurroundingSpaces_isAccepted() {
+        assertNotNull(parse("l", "r", "o", " " + S + " ", E).window());
     }
 
     @Test
-    void validRulebook_returnsFalseForExtraHeaders() throws IOException {
-        Path rulebook = tempDir.resolve("extra_headers.csv");
-        Files.writeString(rulebook, "level,severity_score,extra\n1,10,foo\n");
+    void logFormatParsesNormalTimestamp_regressionForStrictYear() {
+        assertEquals(LocalDateTime.of(2024, 3, 15, 2, 0, 0), LocalDateTime.parse(S, LogsReader.FORMAT));
+    }
 
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
+    // ---------- window ordering ----------
 
-        assertFalse(validator.validRulebook());
+    @Test
+    void startAfterEnd_throwsAndSaysSo() {
+        assertTrue(messageFor("l", "r", "o", E, S).contains("later"));
     }
 
     @Test
-    void validRulebook_returnsFalseForEmptyFile() throws IOException {
-        Path rulebook = tempDir.resolve("empty.csv");
-        Files.createFile(rulebook);
-
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
-
-        assertFalse(validator.validRulebook());
+    void startOneSecondAfterEnd_throws() {
+        assertThrows(IllegalArgumentException.class, () -> parse("l", "r", "o", "2024-03-15 02:00:01", S));
     }
 
     @Test
-    void validRulebook_returnsFalseWhenFileDoesNotExist() {
-        Path rulebook = tempDir.resolve("missing.csv");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getRulebookPath(rulebook.toString());
-
-        assertFalse(validator.validRulebook());
-    }
-
-    @Test
-    void writeReport_createsNewFileWhenItDoesNotExist() throws IOException {
-        Path report = tempDir.resolve("report.txt");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getReportPath(report.toString());
-        validator.writeReport("initial data");
-
-        assertTrue(Files.exists(report));
-        assertEquals("initial data", Files.readString(report));
-    }
-
-    @Test
-    void writeReport_overwritesExistingFile() throws IOException {
-        Path report = tempDir.resolve("existing_report.txt");
-        Files.writeString(report, "old data");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getReportPath(report.toString());
-        validator.writeReport("new data");
-
-        assertTrue(Files.exists(report));
-        assertEquals("new data", Files.readString(report));
-    }
-
-    @Test
-    void writeReport_throwsWhenExtensionIsNotTxt() {
-        Path report = tempDir.resolve("report.md");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getReportPath(report.toString());
-
-        assertThrows(IllegalArgumentException.class,
-                () -> validator.writeReport("data"));
-    }
-
-    @Test
-    void writeReport_throwsWhenReportPathIsNull() {
-        CommandValidator validator = new CommandValidator();
-
-        assertThrows(IllegalArgumentException.class,
-                () -> validator.writeReport("data"));
-    }
-
-    @Test
-    void writeReport_throwsWhenReportPathIsBlank() {
-        CommandValidator validator = new CommandValidator();
-        validator.getReportPath("   ");
-
-        assertThrows(IllegalArgumentException.class,
-                () -> validator.writeReport("data"));
-    }
-
-    @Test
-    void writeReport_acceptsUppercaseTxtExtension() throws IOException {
-        Path report = tempDir.resolve("REPORT.TXT");
-
-        CommandValidator validator = new CommandValidator();
-        validator.getReportPath(report.toString());
-        validator.writeReport("data");
-
-        assertTrue(Files.exists(report));
-        assertEquals("data", Files.readString(report));
+    void startEqualsEnd_isValid() {
+        assertNotNull(parse("l", "r", "o", S, S).window());
     }
 }
