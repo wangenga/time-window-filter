@@ -1,5 +1,8 @@
 package org.example.Classes;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -16,6 +19,8 @@ public class ReportGenerator {
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static String buildReport(
+        LocalDateTime generatedAt,
+        TimeWindow window,
         Map<String, Integer> activitySummary,
         List<String> flaggedEntries,
         Map<String, Integer> susIp,
@@ -25,8 +30,8 @@ public class ReportGenerator {
         StringBuilder sb = new StringBuilder();
 
         sb.append("=== Log Analysis Report ===\n");
-        sb.append("Generated: ").append(LocalDateTime.now().format(REPORT_TIMESTAMP_FORMAT)).append("\n\n");
-
+        sb.append("Generated: ").append(generatedAt.format(REPORT_TIMESTAMP_FORMAT)).append("\n\n");
+        sb.append(TimeWindow.describe(window)).append("\n\n");
         sb.append("--- Activity Summary ---\n");
         if (activitySummary.isEmpty()){
             sb.append("None found\n");
@@ -78,5 +83,17 @@ public class ReportGenerator {
 
         return sb.toString();
 
+    }
+    public static void writeReport(String reportPath, String content) throws IOException {
+        if (reportPath == null || reportPath.isBlank()) {
+            throw new IllegalArgumentException("Report path has not been set.");
+        }
+
+        try {
+            Files.writeString(Path.of(reportPath), content);
+        }catch (IOException e) {
+            throw new IOException("Cannot write report to " + reportPath + ": " + e.getMessage(), e);
+        }
+        
     }
 }
