@@ -1,14 +1,14 @@
 package org.example;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.example.Classes.CommandValidator;
 import org.example.Classes.LogsReader;
 import org.example.Classes.ReportGenerator;
 import org.example.Classes.RulebookAnalyzer;
+import org.example.Classes.TimeWindow;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
@@ -41,79 +41,39 @@ public class Main {
     //Lifecycle: Main -> Command validator -> Main -> Logs reader -> Main -> Rulebook analyzer -> Main -> Report generator -> Main
 
     public static void main(String[] args) throws IOException {
-        CommandValidator commandValidator = new CommandValidator();
-        RulebookAnalyzer rulebookAnalyzer = new RulebookAnalyzer();
-        //Count no. of arguments.
-        if (args.length != 3){
-            System.out.println("Ensure the number of arguments are 3");
-            System.exit(1);
-        }
-        commandValidator.getArguments(args);
-
-
-        if (!commandValidator.correctOrder()){
-            System.exit(1);
-        }
-
-            //We hand over index 0 to LogsReader, 1 to CommandValidator and 2 to CommandValidator.
-        commandValidator.getRulebookPath(args[1]);
-        boolean isRulebookValid = commandValidator.validRulebook();
-        //If the rulebook path is valid, then we hand it over to RulebookAnalyzer:
-        if (!isRulebookValid){
-            System.exit(1);
-        }
-        rulebookAnalyzer.getRulebookPath(args[1]);
-
-        LogsReader.ParseResult result = null;
+        
         try {
-            result = LogsReader.parse(args[0]);
-            System.out.println("Valid entries: " + result.validEntries().size());
-            System.out.println("Malformed lines: " + result.malformedLines().size());
+            // 1. arguments (3 or 5), throws with usage/timestamp messages
+            CommandValidator.Config config = CommandValidator.parse(args);
 
-            //Converting List<LogEntry> into a List<String> and formatting the logs with a '|' delimeter
-            List<String> formattedLogs = result.validEntries().stream()
-                    .map(entry -> String.format("%s | %s | %s | %s | %s",
-                            entry.timestamp(),
-                            entry.level(),
-                            entry.sourceIp(),
-                            entry.target(),
-                            entry.action()))
-                    .toList();
+            // 2. rulebook: missing, unreadable or malformed stops the tool
+            RulebookAnalyzer rulebookAnalyzer = new RulebookAnalyzer();
+            rulebookAnalyzer.loadRulebook(config.rulesPath());
 
-            //Getting the actual line numbers for every log
-            List<String> numberedFormattedLogs = result.validEntries().stream()
-                    .map(entry -> String.format("Line %s: %s | %s | %s | %s | %s",
-                            entry.lineNumber(), //Carries the OG line number.
-                            entry.timestamp(),
-                            entry.level(),
-                            entry.sourceIp(),
-                            entry.target(),
-                            entry.action()))
-                    .toList();
-            //Calling the check level method:
-            rulebookAnalyzer.checkLevel(formattedLogs, numberedFormattedLogs);
-        } catch (IOException e) {
-            System.out.println("Error reading log file: " + e.getMessage());
+            // 3. read the log: missing or unreadable stops the tool
+            LogsReader.ParseResult parsed = LogsReader.parse(config.logPath());
+            List<LogsReader.LogEntry> windowed  = TimeWindow.filter(parsed.validEntries(), config.window());
+            
+            rulebookAnalyzer.checkLevel(windowed);
+            rulebookAnalyzer.suspiciousIPs(windowed);
+
+            String report = ReportGenerator.buildReport(
+                LocalDateTime.now(),
+                config.window(),
+                rulebookAnalyzer.getStats(),
+                rulebookAnalyzer.getFlaggedEntries(),
+                rulebookAnalyzer.getSuspiciousIp(),
+                rulebookAnalyzer.getUnknownLogs(),
+                parsed.malformedLines());
+            ReportGenerator.writeReport(config.reportPath(), report);
+
+
+        } catch (IllegalArgumentException | IOException e){
+            System.err.println(e.getMessage());
             System.exit(1);
         }
 
-        //pass the logentry list into analyser directly
-        rulebookAnalyzer.suspiciousIPs(result.validEntries());
-
-        String reportText = ReportGenerator.buildReport(
-            rulebookAnalyzer.getStats(),
-            rulebookAnalyzer.getFlaggedEntries(),
-            rulebookAnalyzer.getSuspiciousIp(),
-            rulebookAnalyzer.getUnknownLogs(),
-            result.malformedLines()
-        );
-
-        System.out.println("\n----- REPORT PREVIEW -----\n");
-        System.out.println(reportText); 
-
-
-        commandValidator.getReportPath(args[2]);
-        commandValidator.writeReport(reportText);
+        
     }
 
 }
