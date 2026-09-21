@@ -5,28 +5,34 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class LogsReader {
 
-    private static final DateTimeFormatter TIMESTAMP_FORMAT =
+    public static final DateTimeFormatter FORMAT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public record ParseResult(List<LogEntry> validEntries, List<LineIssue> malformedLines){}
 
-    public record LogEntry(int lineNumber, String timestamp, String level, String sourceIp, String target, String action) {}
+    public record LogEntry(int lineNumber,String rawline, LocalDateTime timestamp, String level, String sourceIp, String target, String action) {}
 
     public record LineIssue(int lineNumber, String rawContent) {}
     // used for both malformed lines and unknown patterns
 
     public record ScoredEntry(LogEntry entry, int severityScore) {}
 
-    public static ParseResult parse(String filePath) throws IOException {
 
-        Path logfilePath = Path.of(filePath);
-        List<String> lines = Files.readAllLines(logfilePath);
-        return parseLines(lines);
+    public static ParseResult parse(String filePath) throws IOException {
+        try{
+            Path logfilePath = Path.of(filePath);
+            List<String> lines = Files.readAllLines(logfilePath);
+            return parseLines(lines);
+        } catch (IOException e){
+            throw new IOException("Cannot read log file " + filePath + ": " + e.getMessage(), e);
+        }
+        
         
     }
 
@@ -61,16 +67,17 @@ public class LogsReader {
 
             // try parsing field[0] as LocalDateTime with TIMESTAMP_FORMAT catch DateTimeParseException -> malformed
             
+            LocalDateTime ts;
             try {
-                LocalDateTime.parse(fields[0], TIMESTAMP_FORMAT);
+                ts = LocalDateTime.parse(fields[0].trim(), FORMAT);
 
-            } catch (Exception e) {
+            } catch (DateTimeParseException e) {
                 malformedLines.add(new LineIssue(lineNumber, rawLines));
                 continue;
             }
 
             // build LogEntry and add to validEntries
-            LogEntry entry = new LogEntry(lineNumber, fields[0], fields[1], fields[2], fields[3], fields[4]);
+            LogEntry entry = new LogEntry(lineNumber, rawLines, ts, fields[1], fields[2], fields[3], fields[4]);
 
             validEntries.add(entry);
 
