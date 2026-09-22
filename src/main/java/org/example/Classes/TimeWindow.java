@@ -9,7 +9,7 @@ public record TimeWindow(LocalDateTime start, LocalDateTime end) {
     public TimeWindow {
         if (start.isAfter(end))
             throw new IllegalArgumentException(
-                "Start time " + start + " is later than end time " + end);
+                "Start time " + LogsReader.FORMAT.format(start) + " is later than end time " + LogsReader.FORMAT.format(end));
     }
 
     public boolean contains(LocalDateTime t) {
