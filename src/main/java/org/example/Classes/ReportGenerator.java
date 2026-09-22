@@ -30,8 +30,9 @@ public class ReportGenerator {
         StringBuilder sb = new StringBuilder();
 
         sb.append("=== Log Analysis Report ===\n");
-        sb.append("Generated: ").append(generatedAt.format(REPORT_TIMESTAMP_FORMAT)).append("\n\n");
+        sb.append("Generated: ").append(generatedAt.format(REPORT_TIMESTAMP_FORMAT)).append("\n");
         sb.append(TimeWindow.describe(window)).append("\n\n");
+
         sb.append("--- Activity Summary ---\n");
         if (activitySummary.isEmpty()){
             sb.append("None found\n");
