@@ -334,4 +334,25 @@ class RulebookAnalyzerTest {
         assertTrue(a.getSuspiciousIp().isEmpty());
         assertTrue(a.getUnknownLogs().isEmpty());
     }
+
+    @Test
+    void parseRulebook_headerWithSpaces_isAccepted() {
+        RulebookAnalyzer a = new RulebookAnalyzer();
+        assertDoesNotThrow(() -> a.parseRulebook(List.of(" level , severity_score ", "INFO,1"), "r.csv"));
+    }
+
+    @Test
+    void parseRulebook_extraHeaderColumn_throws() {
+        RulebookAnalyzer a = new RulebookAnalyzer();
+        assertThrows(IllegalArgumentException.class,
+            () -> a.parseRulebook(List.of("level,severity_score,extra", "INFO,1,foo"), "r.csv"));
+    }
+
+    @Test
+    void loadRulebook_missingFile_throwsNotFound() {
+        RulebookAnalyzer a = new RulebookAnalyzer();
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+            () -> a.loadRulebook("definitely-missing-rulebook.csv"));
+        assertTrue(e.getMessage().contains("not found"));
+    }
 }
