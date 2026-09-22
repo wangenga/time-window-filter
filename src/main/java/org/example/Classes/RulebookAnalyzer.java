@@ -17,9 +17,9 @@ public class RulebookAnalyzer {
     Set<String> flaggedIPsUnique = new HashSet<>(); //Uniquely stores IP Addresses that have been flagged. We will then use that dataset to see how many times...
     //...each of these records appears in flagged logs.
     Map<String, Integer> flaggedIPsCount = new HashMap<>();
-    Map<String, Integer> stats = new HashMap<>();
+    Map<String, Integer> stats = new LinkedHashMap<>();
 
-    Map<String, Integer> rulebookContent = new HashMap<>();
+    Map<String, Integer> rulebookContent = new LinkedHashMap<>();
 
 
     String rulebookPath;
